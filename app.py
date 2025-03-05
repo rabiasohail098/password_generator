@@ -5,7 +5,7 @@ import json
 import os
 import re
 
-API_URL = "https://passwordgenerator-tzwnvcavgnzd6mtczjohwh.streamlit.app/generate-password/"
+API_URL = "https://fastapi-backend-production-6a7c.up.railway.app/generate-password/"
 HISTORY_FILE = "password_history.json"  # JSON file to store history
 
 st.set_page_config(page_title="Secure Password Generator", layout="wide")
