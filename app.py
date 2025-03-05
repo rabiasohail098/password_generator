@@ -1,9 +1,9 @@
 import streamlit as st
 import requests
-import time
 import json
 import os
 import re
+import time  # Required for animations
 
 API_URL = "https://fastapi-backend-production-6a7c.up.railway.app/generate-password/"
 HISTORY_FILE = "password_history.json"  # JSON file to store history
@@ -23,7 +23,7 @@ def save_password_history(history):
 
 password_history = load_password_history()
 
-# 🎉 Sidebar for Password History
+# 📜 Sidebar for Password History
 st.sidebar.title("📜 Password History")
 for past_password in reversed(password_history):
     st.sidebar.text(past_password)
@@ -47,7 +47,7 @@ suggestions = {
     "Contains a special character (!@#$%)": bool(re.search(r"[!@#$%^&*()_+]", manual_password)) if manual_password else False,
 }
 
-# 🎯 Show Password Strength Suggestions with Bullet Points
+# 🎯 Show Password Strength Suggestions
 st.markdown("### 🔍 Password Strength Suggestions")
 for tip, met in suggestions.items():
     color = "green" if met else "red"
@@ -55,47 +55,45 @@ for tip, met in suggestions.items():
 
 # 🎯 Generate Password Button
 if st.button("Generate Password 🔄"):
-    params = {"length": length, "digits": use_digits, "special": use_special}
+    params = {
+        "length": length,
+        "digits": use_digits,
+        "special": use_special
+    }
 
+    # ✅ If user entered a manual password, add it to request
     if manual_password:
         params["user_password"] = manual_password
 
     response = requests.get(API_URL, params=params)
-    
-    if response.status_code == 200:
-        data = response.json()
 
-        # 🛑 Error Handling
+    try:
+        data = response.json()
         if "error" in data:
-            st.error(data["error"])
-            st.toast("🚨 Invalid Password Length!", icon="⚠️")
+            st.error(data["error"])  # ❌ Show error if backend returns it
         elif "warning" in data:
-            st.warning(data["warning"])
-            st.toast("⚠️ Consider changing your password!", icon="❗")
-        else:
-            password = data["password"]
+            st.warning(data["warning"])  # ⚠️ Show warning if backend sends it
+        elif "password" in data:
+            st.success(data.get("message", "✅ Secure Password Generated!"))
+            st.code(data["password"], language="text")
 
             # ✅ Check for Repeated Password
-            if password in password_history:
+            if data["password"] in password_history:
                 st.warning("⚠️ Warning: You have already used this password!")
-                st.toast("⚠️ This password is repeated!", icon="🚨")
             else:
-                st.success("✅ Secure Password Generated!")
-                st.code(password, language="text")
-
                 # ✅ Save Password in History (Keep last 15)
-                password_history.append(password)
+                password_history.append(data["password"])
                 password_history = password_history[-15:]
-                save_password_history(password_history)  # Save to file
+                save_password_history(password_history)
 
-                # 📋 Copy Button with Animation
+                # 📋 Copy Button
                 if st.button("📋 Copy Password"):
-                    st.toast("✅ Password Copied to Clipboard!", icon="📌")
-                    time.sleep(0.5)
+                    st.success("✅ Password Copied to Clipboard!")
 
-                # 🎉 Fun Animation on Password Generation
+                # 🎉 Keep Animations!
                 st.balloons()  # Fireworks 🎇
                 time.sleep(0.5)
                 st.snow()  # Snowfall effect ❄️
-    else:
-        st.error("❌ Failed to generate password!")
+    except requests.exceptions.JSONDecodeError:
+        st.error("❌ Failed to parse JSON response from backend!")
+        st.write("Raw Response:", response.text)
